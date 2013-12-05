@@ -73,15 +73,15 @@ namespace SDImager
             progress.Maximum = (int)(vi.PhysicalDriveSize / (1024 * 1024)) + 1;
             progress.Value = 0;
             cts = new CancellationTokenSource();
-            try
-            {
-                await CopyStreamAsync(source, dest, cts.Token);
-            }
-            catch (Exception ex)
-            {
-                if (!(ex is OperationCanceledException))
-                    MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
-            }
+            //try
+            //{
+            await CopyStreamAsync(source, dest, (long)vi.PhysicalDriveSize, cts.Token);
+            //}
+            //catch (Exception ex)
+            //{
+            //    if (!(ex is OperationCanceledException))
+            //        MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
+            //}
             ResetProgress();
             vi.UnlockVolume();
             vi.Dispose();
@@ -116,7 +116,7 @@ namespace SDImager
             cts = new CancellationTokenSource();
             try
             {
-                await CopyStreamAsync(source, dest, cts.Token);
+                await CopyStreamAsync(source, dest, source.Length, cts.Token);
             }
             catch (Exception ex)
             {
@@ -166,7 +166,7 @@ namespace SDImager
             lblTimeRemaining.Text = lblSpeed.Text;
         }
 
-        private async Task CopyStreamAsync(FileStream source, FileStream dest, CancellationToken token)
+        private async Task CopyStreamAsync(FileStream source, FileStream dest, long count, CancellationToken token)
         {
             byte[] buf = new byte[1024 * 1024];
             var oldCaption = this.Text;
@@ -176,7 +176,8 @@ namespace SDImager
             do
             {
                 token.ThrowIfCancellationRequested();
-                len = await source.ReadAsync(buf, 0, buf.Length);
+                len = await source.ReadAsync(buf, 0, (int)Math.Min(count, buf.Length));
+                count -= len;
                 await dest.WriteAsync(buf, 0, len);
 
                 progress.Value += 1;
@@ -190,9 +191,8 @@ namespace SDImager
                     this.Text = string.Format("{0} ({1}: {2:P0})", Application.ProductName, Operation, (double)progress.Value / progress.Maximum);
                     lasti = progress.Value;
                     sw.Restart();
-                    //lblSpeed.Refresh();
                 }
-            } while (len > 0);
+            } while (count > 0);
             sw.Stop();
             this.Text = oldCaption;
         }
