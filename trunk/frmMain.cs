@@ -73,15 +73,15 @@ namespace SDImager
             progress.Maximum = (int)(vi.PhysicalDriveSize / (1024 * 1024)) + 1;
             progress.Value = 0;
             cts = new CancellationTokenSource();
-            //try
-            //{
+            try
+            {
             await CopyStreamAsync(source, dest, (long)vi.PhysicalDriveSize, cts.Token);
-            //}
-            //catch (Exception ex)
-            //{
-            //    if (!(ex is OperationCanceledException))
-            //        MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
-            //}
+            }
+            catch (Exception ex)
+            {
+                if (!(ex is OperationCanceledException))
+                    MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
+            }
             ResetProgress();
             vi.UnlockVolume();
             vi.Dispose();
