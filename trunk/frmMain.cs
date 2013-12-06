@@ -75,17 +75,20 @@ namespace SDImager
             cts = new CancellationTokenSource();
             try
             {
-            await CopyStreamAsync(source, dest, (long)vi.PhysicalDriveSize, cts.Token);
+                await CopyStreamAsync(source, dest, (long)vi.PhysicalDriveSize, cts.Token);
             }
             catch (Exception ex)
             {
                 if (!(ex is OperationCanceledException))
                     MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
+                cts.Cancel();
             }
             ResetProgress();
             vi.UnlockVolume();
             vi.Dispose();
             dest.Close();
+            if (!cts.IsCancellationRequested)
+                MessageBox.Show("Reading complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
             SetButtons(true);
             cts = null;
             this.Text = Application.ProductName;
@@ -100,8 +103,8 @@ namespace SDImager
                 return;
             }
             var filename = Path.GetFullPath(txtFilename.Text);
-            if (MessageBox.Show("All data on SD card will be erased and overwritten. Are you sure?", "Question",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.No) return;
+            if (MessageBox.Show("All data on SD card will be erased and overwritten. Are you sure?", "Warning",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == System.Windows.Forms.DialogResult.No) return;
 
             Operation = "Writing";
             SetButtons(false);
@@ -122,11 +125,14 @@ namespace SDImager
             {
                 if (!(ex is OperationCanceledException))
                     MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
+                cts.Cancel();
             }
             ResetProgress();
             vi.UnlockVolume();
             vi.Dispose();
             source.Close();
+            if (!cts.IsCancellationRequested)
+                MessageBox.Show("Writing complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
             SetButtons(true);
             cts = null;
             this.Text = Application.ProductName;
@@ -166,7 +172,7 @@ namespace SDImager
             lblTimeRemaining.Text = lblSpeed.Text;
         }
 
-        private async Task CopyStreamAsync(FileStream source, FileStream dest, long count, CancellationToken token)
+        private async Task CopyStreamAsync(Stream source, Stream dest, long count, CancellationToken token)
         {
             byte[] buf = new byte[1024 * 1024];
             var oldCaption = this.Text;
@@ -209,6 +215,12 @@ namespace SDImager
         {
             btnRead.Enabled = p;
             btnWrite.Enabled = p;
+            btnErase.Enabled = p;
+            btnFormat.Enabled = p;
+            txtFilename.Enabled = p;
+            btnChooseFile.Enabled = p;
+            lstSDDrive.Enabled = p;
+            chkLL.Enabled = p;
             btnStop.Text = p ? "Exit" : "Cancel";
         }
 
@@ -251,6 +263,76 @@ namespace SDImager
         private void chkLL_CheckedChanged(object sender, EventArgs e)
         {
             FillSDDrives();
+        }
+
+        private async void btnErase_Click(object sender, EventArgs e)
+        {
+            VolumeInfo vi = (VolumeInfo)lstSDDrive.SelectedItem;
+            if (MessageBox.Show("All data on SD card will be erased. Are you sure?", "Warning",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == System.Windows.Forms.DialogResult.No) return;
+
+            Operation = "Erasing";
+            SetButtons(false);
+
+            var source = new ConstantStream(0xff);
+            var dest = vi.GetPhysicalDriveStream(FileAccess.Write);
+            vi.LockVolume();
+            vi.DismountVolume();
+
+            progress.Value = 0;
+            progress.Maximum = (int)(vi.PhysicalDriveSize / (1024 * 1024)) + 1;
+            cts = new CancellationTokenSource();
+            try
+            {
+                await CopyStreamAsync(source, dest, (long)vi.PhysicalDriveSize, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                if (!(ex is OperationCanceledException))
+                    MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
+                cts.Cancel();
+            }
+            ResetProgress();
+            vi.UnlockVolume();
+            vi.Dispose();
+            source.Close();
+            if (!cts.IsCancellationRequested)
+                MessageBox.Show("Erasing complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            SetButtons(true);
+            cts = null;
+            this.Text = Application.ProductName;
+        }
+
+        private async void btnFormat_Click(object sender, EventArgs e)
+        {
+            VolumeInfo vi = (VolumeInfo)lstSDDrive.SelectedItem;
+            if (MessageBox.Show("All data on SD card will be lost during format. Are you sure?", "Warning",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == System.Windows.Forms.DialogResult.No) return;
+
+            SetButtons(false);
+
+            this.Text += " (Formatting)";
+            lblSpeed.Text = "Windows is formatting the drive...";
+            cts = new CancellationTokenSource();
+            var dest = vi.GetPhysicalDriveStream(FileAccess.Write);
+            //vi.LockVolume();
+            //vi.DismountVolume();
+            progress.Value = 0;
+            progress.Maximum = 100;
+            await Task.Run(() => vi.Format(ProgressHandler, cts.Token));
+            //vi.UnlockVolume();
+            vi.Dispose();
+            if (!cts.IsCancellationRequested)
+                MessageBox.Show("Formatting complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ResetProgress();
+            SetButtons(true);
+            cts = null;
+            this.Text = Application.ProductName;
+        }
+
+        private void ProgressHandler(object sender, ProgressEventArgs e)
+        {
+            BeginInvoke(new Action(() => progress.Value = e.Current));
         }
     }
 }
