@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Management;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SDImager
 {
@@ -19,6 +21,7 @@ namespace SDImager
 
         FileStream hVolume;
         FileStream hPhysicalDrive;
+        ManualResetEvent hWait;
 
         public override string ToString()
         {
@@ -92,6 +95,47 @@ namespace SDImager
             if (hPhysicalDrive != null) return hPhysicalDrive;
             hPhysicalDrive = IOWrapper.GetFileStream(PhysicalDriveID, FileMode.Open, access, FileShare.ReadWrite);
             return hPhysicalDrive;
+        }
+
+        private ManagementObject GetWMIVolume()
+        {
+            //return new ManagementObject(string.Format(@"Win32_Volume.Name='{0}\\'", VolumeID));
+            foreach (var o in new ManagementObjectSearcher("Select * from Win32_Volume WHERE DriveLetter='" + VolumeID + "'").Get())
+                return (ManagementObject)o;
+            return null;
+        }
+
+        public void Format(ProgressEventHandler progressHandler, CancellationToken token)
+        {
+            var mo = GetWMIVolume();
+            object r;
+            r = mo.InvokeMethod("Dismount", new object[] { true, false });
+            var param = mo.GetMethodParameters("Format");
+            param["FileSystem"] = "FAT32";
+            param["QuickFormat"] = true;
+            param["Label"] = "Empty";
+            var ob = new ManagementOperationObserver();
+            //var tcs = new TaskCompletionSource<void>();
+            ob.Progress += progressHandler;
+            ob.Completed += OnCompleted;
+            hWait = new ManualResetEvent(false);
+            mo.InvokeMethod(ob, "Format", param, null);
+            try
+            {
+                Task.Run(() => hWait.WaitOne()).Wait(token);
+            }
+            catch (OperationCanceledException)
+            {
+                ob.Cancel();
+            }
+            hWait.Dispose();
+            hWait = null;
+            r = mo.InvokeMethod("Mount", null);
+        }
+
+        private void OnCompleted(object sender, CompletedEventArgs e)
+        {
+            hWait.Set();
         }
 
     }
