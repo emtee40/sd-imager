@@ -14,7 +14,7 @@ namespace SDImager
         public string VolumeID;
         public string PartitionID;
         public string PhysicalDriveID;
-        public ulong PhysicalDriveSize;
+        public long PhysicalDriveSize;
         public DriveInfo DriveInfo;
         public string InterfaceType;
         public string Model;
@@ -38,7 +38,7 @@ namespace SDImager
                 }
         }
 
-        public void Dispose()
+        public void CloseHandles()
         {
             if (hVolume != null)
             {
@@ -100,13 +100,16 @@ namespace SDImager
         private ManagementObject GetWMIVolume()
         {
             //return new ManagementObject(string.Format(@"Win32_Volume.Name='{0}\\'", VolumeID));
-            foreach (var o in new ManagementObjectSearcher("Select * from Win32_Volume WHERE DriveLetter='" + VolumeID + "'").Get())
+            foreach (var o in new ManagementObjectSearcher("SELECT * FROM Win32_Volume WHERE DriveLetter='" + VolumeID + "'").Get())
                 return (ManagementObject)o;
             return null;
         }
 
         public void Format(ProgressEventHandler progressHandler, CancellationToken token)
         {
+            if (DriveInfo == null)
+                throw new NotSupportedException();
+
             var mo = GetWMIVolume();
             object r;
             r = mo.InvokeMethod("Dismount", new object[] { true, false });
@@ -138,6 +141,10 @@ namespace SDImager
             hWait.Set();
         }
 
+        public void Dispose()
+        {
+            CloseHandles();
+        }
     }
 
     internal static class DriveTools
@@ -168,8 +175,9 @@ namespace SDImager
                     {
                         vi.PhysicalDriveID = (string)o["DeviceID"];
                         vi.InterfaceType = (string)o["InterfaceType"];
-                        vi.PhysicalDriveSize = (ulong)o["Size"];
+                        vi.PhysicalDriveSize = IOWrapper.GetLength(vi.GetPhysicalDriveStream(FileAccess.Read).SafeFileHandle);
                         vi.Model = (string)o["Model"];
+                        vi.CloseHandles();
                     }
                 }
 
@@ -194,10 +202,11 @@ namespace SDImager
                 var vi = new VolumeInfo();
                 vi.PhysicalDriveID = (string)o["DeviceID"];
                 vi.InterfaceType = (string)o["InterfaceType"];
-                vi.PhysicalDriveSize = (ulong)o["Size"];
+                vi.PhysicalDriveSize = IOWrapper.GetLength(vi.GetPhysicalDriveStream(FileAccess.Read).SafeFileHandle);
                 vi.Model = (string)o["Model"];
                 vi.VolumeID = "(none)";
                 vi.PartitionID = vi.VolumeID;
+                vi.CloseHandles();
                 r.Add(vi);
             }
             return r;

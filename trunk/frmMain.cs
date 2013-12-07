@@ -31,6 +31,10 @@ namespace SDImager
 
         private void frmMain_Load(object sender, EventArgs e)
         {
+#if DEBUG
+            btnErase.Visible = true;
+            chkLL.Visible = true;
+#endif
             DriveTools.StartDriveChangeNotification(DriveChanged);
             FillSDDrives();
             ResetProgress();
@@ -85,7 +89,7 @@ namespace SDImager
             }
             ResetProgress();
             vi.UnlockVolume();
-            vi.Dispose();
+            vi.CloseHandles();
             dest.Close();
             if (!cts.IsCancellationRequested)
                 MessageBox.Show("Reading complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -129,7 +133,7 @@ namespace SDImager
             }
             ResetProgress();
             vi.UnlockVolume();
-            vi.Dispose();
+            vi.CloseHandles();
             source.Close();
             if (!cts.IsCancellationRequested)
                 MessageBox.Show("Writing complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -216,7 +220,7 @@ namespace SDImager
             btnRead.Enabled = p;
             btnWrite.Enabled = p;
             btnErase.Enabled = p;
-            btnFormat.Enabled = p;
+            btnFormat.Enabled = p && !chkLL.Checked;
             txtFilename.Enabled = p;
             btnChooseFile.Enabled = p;
             lstSDDrive.Enabled = p;
@@ -262,6 +266,7 @@ namespace SDImager
 
         private void chkLL_CheckedChanged(object sender, EventArgs e)
         {
+            SetButtons(true);
             FillSDDrives();
         }
 
@@ -279,12 +284,16 @@ namespace SDImager
             vi.LockVolume();
             vi.DismountVolume();
 
+            var mbr = Properties.Resources.MBR;
+            dest.Write(mbr, 0, mbr.Length);
+
             progress.Value = 0;
-            progress.Maximum = (int)(vi.PhysicalDriveSize / (1024 * 1024)) + 1;
+            progress.Maximum = (int)((vi.PhysicalDriveSize - mbr.Length) / (1024 * 1024)) + 1;
+
             cts = new CancellationTokenSource();
             try
             {
-                await CopyStreamAsync(source, dest, (long)vi.PhysicalDriveSize, cts.Token);
+                await CopyStreamAsync(source, dest, (long)vi.PhysicalDriveSize - mbr.Length, cts.Token);
             }
             catch (Exception ex)
             {
@@ -294,7 +303,7 @@ namespace SDImager
             }
             ResetProgress();
             vi.UnlockVolume();
-            vi.Dispose();
+            vi.CloseHandles();
             source.Close();
             if (!cts.IsCancellationRequested)
                 MessageBox.Show("Erasing complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -321,7 +330,7 @@ namespace SDImager
             progress.Maximum = 100;
             await Task.Run(() => vi.Format(ProgressHandler, cts.Token));
             //vi.UnlockVolume();
-            vi.Dispose();
+            vi.CloseHandles();
             if (!cts.IsCancellationRequested)
                 MessageBox.Show("Formatting complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
             ResetProgress();
