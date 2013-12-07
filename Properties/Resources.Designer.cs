@@ -59,5 +59,15 @@ namespace SDImager.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] MBR {
+            get {
+                object obj = ResourceManager.GetObject("MBR", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }
