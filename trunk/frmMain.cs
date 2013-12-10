@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -273,6 +274,12 @@ namespace SDImager
         private async void btnErase_Click(object sender, EventArgs e)
         {
             VolumeInfo vi = (VolumeInfo)lstSDDrive.SelectedItem;
+            if (vi == null)
+            {
+                MessageBox.Show("Choose valid SD drive first.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             if (MessageBox.Show("All data on SD card will be erased. Are you sure?", "Warning",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == System.Windows.Forms.DialogResult.No) return;
 
@@ -315,6 +322,12 @@ namespace SDImager
         private async void btnFormat_Click(object sender, EventArgs e)
         {
             VolumeInfo vi = (VolumeInfo)lstSDDrive.SelectedItem;
+            if (vi == null)
+            {
+                MessageBox.Show("Choose valid SD drive first.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             if (MessageBox.Show("All data on SD card will be lost during format. Are you sure?", "Warning",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == System.Windows.Forms.DialogResult.No) return;
 

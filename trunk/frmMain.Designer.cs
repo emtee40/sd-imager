@@ -256,6 +256,7 @@
             // 
             // txtFilename
             // 
+            this.txtFilename.AllowDrop = true;
             this.txtFilename.Location = new System.Drawing.Point(7, 22);
             this.txtFilename.Name = "txtFilename";
             this.txtFilename.Size = new System.Drawing.Size(370, 21);
@@ -416,6 +417,7 @@
             // 
             // frmMain
             // 
+            this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(430, 421);
@@ -424,7 +426,7 @@
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Font = new System.Drawing.Font("Verdana", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.MinimizeBox = false;
