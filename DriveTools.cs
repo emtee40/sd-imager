@@ -254,7 +254,7 @@ namespace SDImager
         private static void EventArrived(object sender, EventArrivedEventArgs e)
         {
             if (NotifyHandler != null)
-                NotifyHandler(null, EventArgs.Empty);
+                NotifyHandler(NotifyHandler.Target, EventArgs.Empty);
         }
     }
 }
