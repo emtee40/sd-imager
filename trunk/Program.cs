@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Management;
 using System.Windows.Forms;
 
 namespace SDImager
@@ -13,9 +14,16 @@ namespace SDImager
         [STAThread]
         static void Main()
         {
+            Test();
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new frmMain());
+        }
+
+        private static void Test()
+        {
+           
         }
     }
 }

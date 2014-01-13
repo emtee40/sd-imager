@@ -8,7 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SDImager
+namespace OSX.IOlib
 {
     public class IOWrapper
     {
@@ -43,11 +43,11 @@ namespace SDImager
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern SafeFileHandle CreateFile(
            string lpFileName,
-           [MarshalAs(UnmanagedType.U4)] FileAccess dwDesiredAccess,
-           [MarshalAs(UnmanagedType.U4)] FileShare dwShareMode,
+           [MarshalAs(UnmanagedType.U4)] FileAccess DesiredAccess,
+           [MarshalAs(UnmanagedType.U4)] FileShare ShareMode,
            IntPtr lpSecurityAttributes,
-           [MarshalAs(UnmanagedType.U4)] FileMode dwCreationDisposition,
-           [MarshalAs(UnmanagedType.U4)] FileAttributes dwFlagsAndAttributes,
+           [MarshalAs(UnmanagedType.U4)] FileMode CreationDisposition,
+           [MarshalAs(UnmanagedType.U4)] FileAttributes FlagsAndAttributes,
            IntPtr hTemplateFile);
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -64,37 +64,33 @@ namespace SDImager
             ref uint lpBytesReturned,
             IntPtr lpOverlapped);
 
-        public static bool LockVolume(SafeHandle handle)
+        public static void LockVolume(SafeHandle handle)
         {
             uint bytesReturned = 0;
             var b = DeviceIoControl(handle.DangerousGetHandle(), FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, ref  bytesReturned, IntPtr.Zero);
             if (!b)
-                throw new IOException();
-            return true;
+                Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
         }
 
-        public static bool UnlockVolume(SafeHandle handle)
+        public static void UnlockVolume(SafeHandle handle)
         {
             uint bytesReturned = 0;
             var b = DeviceIoControl(handle.DangerousGetHandle(), FSCTL_UNLOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, ref  bytesReturned, IntPtr.Zero);
             if (!b)
-                throw new IOException();
-            return true;
+                Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
         }
 
-        public static bool DismountVolume(SafeHandle handle)
+        public static void DismountVolume(SafeHandle handle)
         {
             uint bytesReturned = 0;
             var b = DeviceIoControl(handle.DangerousGetHandle(), FSCTL_DISMOUNT_VOLUME, IntPtr.Zero, 0, IntPtr.Zero, 0, ref  bytesReturned, IntPtr.Zero);
             if (!b)
-                throw new IOException();
-            return true;
+                Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
         }
 
         public static long GetLength(SafeHandle handle)
         {
-
-            var hResult = Marshal.AllocHGlobal(sizeof(long));
+            var hResult = Marshal.AllocHGlobal(sizeof(ulong));
             uint bytesReturned = 0;
             long r = 0;
             try
