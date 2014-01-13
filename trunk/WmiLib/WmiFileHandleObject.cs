@@ -7,14 +7,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OSX.IOlib
+namespace OSX.WmiLib
 {
-    internal abstract class FileHandleBaseObject<T> : BaseObject<T>
-        where T: BaseObject<T>
+    internal abstract class WmiFileHandleObject<T> : WmiObject<T>
+        where T: WmiObject<T>
     {
         public abstract string GetFilename();
         protected SafeHandle m_LastHandle;
-
         
         private SafeFileHandle CreateHandle(FileAccess DesiredAccess, FileShare ShareMode, FileMode CreationDisposition, FileAttributes FlagsAndAttributes)
         {

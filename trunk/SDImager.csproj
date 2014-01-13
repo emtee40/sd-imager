@@ -80,19 +80,25 @@
     <Compile Include="frmMain.Designer.cs">
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
-    <Compile Include="IOlib\BaseObject.cs" />
-    <Compile Include="IOlib\DiskPartition.cs" />
-    <Compile Include="IOlib\FileHandleBaseObject.cs" />
-    <Compile Include="IOlib\LogicalDisk.cs" />
-    <Compile Include="IOlib\WmiClassAttribute.cs" />
-    <Compile Include="IOlib\DiskDrive.cs" />
-    <Compile Include="IOlib\Volume.cs" />
-    <Compile Include="IOlib\WmiInfo.cs" />
-    <Compile Include="IOlib\WmiPropertyAttribute.cs" />
-    <Compile Include="IOlib\IOWrapper.cs" />
+    <Compile Include="WmiLib\WmiObject.cs" />
+    <Compile Include="WmiLib\Directory.cs" />
+    <Compile Include="WmiLib\DiskPartition.cs" />
+    <Compile Include="WmiLib\Evaluator.cs" />
+    <Compile Include="WmiLib\WmiFileHandleObject.cs" />
+    <Compile Include="WmiLib\IWmiQueryable.cs" />
+    <Compile Include="WmiLib\LogicalDisk.cs" />
+    <Compile Include="WmiLib\WmiClassAttribute.cs" />
+    <Compile Include="WmiLib\DiskDrive.cs" />
+    <Compile Include="WmiLib\Volume.cs" />
+    <Compile Include="WmiLib\WmiContext.cs" />
+    <Compile Include="WmiLib\WmiInfo.cs" />
+    <Compile Include="WmiLib\WmiPropertyAttribute.cs" />
+    <Compile Include="WmiLib\IOWrapper.cs" />
     <Compile Include="ConstantStream.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WmiLib\WmiQuery.cs" />
+    <Compile Include="WmiLib\WmiQueryBuilder.cs" />
     <EmbeddedResource Include="frmMain.resx">
       <DependentUpon>frmMain.cs</DependentUpon>
     </EmbeddedResource>

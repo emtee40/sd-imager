@@ -1,4 +1,4 @@
-﻿using OSX.IOlib;
+﻿using OSX.WmiLib;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,7 +20,6 @@ namespace SDImager
     public partial class frmMain : Form
     {
         bool m_DrivesFound;
-        DateTime m_LastDriveChange;
         CancellationTokenSource cts;
         string Operation;
 
@@ -29,15 +28,24 @@ namespace SDImager
             InitializeComponent();
         }
 
-        private void DriveChanged(object sender, EventArgs e)
+        private void DriveChanged(object sender, EventArrivedEventArgs e)
         {
-            Debug.WriteLine(DateTime.Now);
-            //if ((DateTime.Now - m_LastDriveChange).TotalMilliseconds > 2000)
-            {
-                m_LastDriveChange = DateTime.Now;
-                FillDriveList();
-            }
+            //DumpChangedProperties((ManagementBaseObject)e.NewEvent["PreviousInstance"], (ManagementBaseObject)e.NewEvent["TargetInstance"]);
+            FillDriveList();
         }
+
+        //private void DumpChangedProperties(ManagementBaseObject oldObj, ManagementBaseObject newObj)
+        //{
+        //    foreach (var p in oldObj.Properties)
+        //    {
+        //        var v1 = p.Value == null ? "(null)" : p.Value.ToString();
+        //        var v2 = newObj[p.Name] == null ? "(null)" : newObj[p.Name].ToString();
+        //        if (v1 != v2)
+        //        {
+        //            Debug.WriteLine("{0}: {1} => {2}", p.Name, v1, v2);
+        //        }
+        //    }
+        //}
 
         private void frmMain_Load(object sender, EventArgs e)
         {
@@ -57,28 +65,34 @@ namespace SDImager
         private void LoadDiskDrives()
         {
             m_DrivesFound = false;
-            BeginInvoke(new Action(() =>
+            string m_SelectedID = null;
+            Invoke(new Action(() =>
             {
+                if (lstDiskDrive.SelectedItem != null)
+                    m_SelectedID = lstDiskDrive.SelectedItem.ToString();
                 lstDiskDrive.DataSource = null;
                 lstDiskDrive.Items.Clear();
                 lstDiskDrive.Items.Add("(loading...)");
                 lstDiskDrive.SelectedIndex = 0;
                 lstDiskDrive.Refresh();
-            }));
-            WmiInfo.LoadDiskInfo();
-            BeginInvoke(new Action(() =>
-            {
-                var l = DriveTools.GetRemovableDiskDrives().ToList();
+                WmiInfo.LoadDiskInfo();
+                var l = DriveTools.GetRemovableDiskDrives().OrderBy(z => z.ID).ToList();
                 lstDiskDrive.Items.Clear();
                 if (l.Count == 0)
+                {
                     lstDiskDrive.Items.Add("(No removable disk drives found)");
+                    lstDiskDrive.SelectedIndex = 0;
+                }
                 else
                 {
                     lstDiskDrive.DataSource = l;
                     m_DrivesFound = true;
+                    var o = l.FirstOrDefault(z => z.ID == m_SelectedID);
+                    if (o != null)
+                        lstDiskDrive.SelectedItem = o;
+                    else
+                        lstDiskDrive_SelectedIndexChanged(this, EventArgs.Empty);
                 }
-                lstDiskDrive.SelectedIndex = 0;
-                lstDiskDrive_SelectedIndexChanged(this, EventArgs.Empty);
                 lstDiskDrive.Refresh();
             }));
         }
@@ -342,7 +356,7 @@ namespace SDImager
                 }
                 else
                 {
-                    lblVolume.Text = string.Join(", ", dd.Volumes);
+                    lblVolume.Text = string.Join(", ", dd.Volumes.Select(z => z.Name));
                     lblFormat.Text = string.Join(", ", dd.Volumes.Select(z => z.FileSystem));
                 }
 

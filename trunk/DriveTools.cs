@@ -6,7 +6,7 @@ using System.Text;
 using System.Management;
 using System.Threading;
 using System.Threading.Tasks;
-using OSX.IOlib;
+using OSX.WmiLib;
 
 namespace SDImager
 {
@@ -151,14 +151,14 @@ namespace SDImager
     internal static class DriveTools
     {
         private static List<ManagementEventWatcher> mew;
-        private static EventHandler NotifyHandler;
+        private static EventArrivedEventHandler NotifyHandler;
 
         public static IEnumerable<DiskDrive> GetRemovableDiskDrives()
         {
-            return DiskDrive.AsEnumerable().Where(z => z.MediaType != null && z.MediaType.ToLower().Contains("removable"));
+            return new WmiContext().DiskDrives.Where(z => z.MediaType.Contains("removable"));
         }
 
-        public static void StartDriveChangeNotification(EventHandler handler)
+        public static void StartDriveChangeNotification(EventArrivedEventHandler handler)
         {
             if (mew != null)
                 throw new Exception("Already started");
@@ -189,7 +189,7 @@ namespace SDImager
         private static void EventArrived(object sender, EventArrivedEventArgs e)
         {
             if (NotifyHandler != null)
-                NotifyHandler(NotifyHandler.Target, EventArgs.Empty);
+                NotifyHandler(NotifyHandler.Target, e);
         }
     }
 }

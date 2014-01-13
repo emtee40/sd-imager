@@ -1,4 +1,5 @@
-﻿using System;
+﻿using OSX.WmiLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
@@ -23,7 +24,7 @@ namespace SDImager
 
         private static void Test()
         {
-           
+
         }
     }
 }

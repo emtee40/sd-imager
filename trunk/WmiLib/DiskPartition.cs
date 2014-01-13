@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OSX.IOlib
+namespace OSX.WmiLib
 {
     [WmiClass("Win32_DiskPartition")]
-    internal class DiskPartition : BaseObject<DiskPartition>
+    internal class DiskPartition : WmiObject<DiskPartition>
     {
         [WmiProperty]
         public ulong BlockSize { get; private set; }
