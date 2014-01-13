@@ -30,20 +30,19 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmMain));
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.chkLL = new System.Windows.Forms.CheckBox();
             this.lblModel = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
             this.lblFormat = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.lblVolume = new System.Windows.Forms.Label();
             this.lblPartition = new System.Windows.Forms.Label();
-            this.lblPhysicalDrive = new System.Windows.Forms.Label();
+            this.lblInterfaceType = new System.Windows.Forms.Label();
             this.lblPhysicalDriveSize = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
-            this.lstSDDrive = new System.Windows.Forms.ComboBox();
+            this.lstDiskDrive = new System.Windows.Forms.ComboBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.btnChooseFile = new System.Windows.Forms.Button();
             this.txtFilename = new System.Windows.Forms.TextBox();
@@ -60,7 +59,7 @@
             this.label6 = new System.Windows.Forms.Label();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.btnFormat = new System.Windows.Forms.Button();
-            this.btnErase = new System.Windows.Forms.Button();
+            this.btnWipe = new System.Windows.Forms.Button();
             this.btnWrite = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
@@ -70,38 +69,25 @@
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.chkLL);
             this.groupBox1.Controls.Add(this.lblModel);
             this.groupBox1.Controls.Add(this.label9);
             this.groupBox1.Controls.Add(this.lblFormat);
             this.groupBox1.Controls.Add(this.label5);
             this.groupBox1.Controls.Add(this.lblVolume);
             this.groupBox1.Controls.Add(this.lblPartition);
-            this.groupBox1.Controls.Add(this.lblPhysicalDrive);
+            this.groupBox1.Controls.Add(this.lblInterfaceType);
             this.groupBox1.Controls.Add(this.lblPhysicalDriveSize);
             this.groupBox1.Controls.Add(this.label4);
             this.groupBox1.Controls.Add(this.label3);
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.label1);
-            this.groupBox1.Controls.Add(this.lstSDDrive);
+            this.groupBox1.Controls.Add(this.lstDiskDrive);
             this.groupBox1.Location = new System.Drawing.Point(5, 12);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(416, 149);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "SD drive";
-            // 
-            // chkLL
-            // 
-            this.chkLL.AutoSize = true;
-            this.chkLL.Location = new System.Drawing.Point(333, 22);
-            this.chkLL.Name = "chkLL";
-            this.chkLL.Size = new System.Drawing.Size(77, 17);
-            this.chkLL.TabIndex = 13;
-            this.chkLL.Text = "low-level";
-            this.chkLL.UseVisualStyleBackColor = true;
-            this.chkLL.Visible = false;
-            this.chkLL.CheckedChanged += new System.EventHandler(this.chkLL_CheckedChanged);
+            this.groupBox1.Text = "Disk drive";
             // 
             // lblModel
             // 
@@ -139,9 +125,9 @@
             this.label5.Font = new System.Drawing.Font("Verdana", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label5.Location = new System.Drawing.Point(7, 64);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(44, 12);
+            this.label5.Size = new System.Drawing.Size(58, 12);
             this.label5.TabIndex = 9;
-            this.label5.Text = "Format:";
+            this.label5.Text = "Format(s):";
             // 
             // lblVolume
             // 
@@ -163,15 +149,15 @@
             this.lblPartition.TabIndex = 7;
             this.lblPartition.Text = "???";
             // 
-            // lblPhysicalDrive
+            // lblInterfaceType
             // 
-            this.lblPhysicalDrive.AutoSize = true;
-            this.lblPhysicalDrive.Font = new System.Drawing.Font("Verdana", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblPhysicalDrive.Location = new System.Drawing.Point(116, 98);
-            this.lblPhysicalDrive.Name = "lblPhysicalDrive";
-            this.lblPhysicalDrive.Size = new System.Drawing.Size(23, 12);
-            this.lblPhysicalDrive.TabIndex = 6;
-            this.lblPhysicalDrive.Text = "???";
+            this.lblInterfaceType.AutoSize = true;
+            this.lblInterfaceType.Font = new System.Drawing.Font("Verdana", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblInterfaceType.Location = new System.Drawing.Point(116, 98);
+            this.lblInterfaceType.Name = "lblInterfaceType";
+            this.lblInterfaceType.Size = new System.Drawing.Size(23, 12);
+            this.lblInterfaceType.TabIndex = 6;
+            this.lblInterfaceType.Text = "???";
             // 
             // lblPhysicalDriveSize
             // 
@@ -201,7 +187,7 @@
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(80, 12);
             this.label3.TabIndex = 3;
-            this.label3.Text = "Physical drive:";
+            this.label3.Text = "Interface type:";
             // 
             // label2
             // 
@@ -209,9 +195,9 @@
             this.label2.Font = new System.Drawing.Font("Verdana", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label2.Location = new System.Drawing.Point(7, 81);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(52, 12);
+            this.label2.Size = new System.Drawing.Size(66, 12);
             this.label2.TabIndex = 2;
-            this.label2.Text = "Partition:";
+            this.label2.Text = "Partition(s):";
             // 
             // label1
             // 
@@ -219,19 +205,19 @@
             this.label1.Font = new System.Drawing.Font("Verdana", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label1.Location = new System.Drawing.Point(7, 48);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(47, 12);
+            this.label1.Size = new System.Drawing.Size(61, 12);
             this.label1.TabIndex = 1;
-            this.label1.Text = "Volume:";
+            this.label1.Text = "Volume(s):";
             // 
-            // lstSDDrive
+            // lstDiskDrive
             // 
-            this.lstSDDrive.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.lstSDDrive.FormattingEnabled = true;
-            this.lstSDDrive.Location = new System.Drawing.Point(7, 20);
-            this.lstSDDrive.Name = "lstSDDrive";
-            this.lstSDDrive.Size = new System.Drawing.Size(320, 21);
-            this.lstSDDrive.TabIndex = 0;
-            this.lstSDDrive.SelectedIndexChanged += new System.EventHandler(this.lstSDDrive_SelectedIndexChanged);
+            this.lstDiskDrive.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.lstDiskDrive.FormattingEnabled = true;
+            this.lstDiskDrive.Location = new System.Drawing.Point(7, 20);
+            this.lstDiskDrive.Name = "lstDiskDrive";
+            this.lstDiskDrive.Size = new System.Drawing.Size(403, 21);
+            this.lstDiskDrive.TabIndex = 0;
+            this.lstDiskDrive.SelectedIndexChanged += new System.EventHandler(this.lstDiskDrive_SelectedIndexChanged);
             // 
             // groupBox2
             // 
@@ -269,6 +255,7 @@
             // 
             // btnRead
             // 
+            this.btnRead.Enabled = false;
             this.btnRead.Location = new System.Drawing.Point(7, 20);
             this.btnRead.Name = "btnRead";
             this.btnRead.Size = new System.Drawing.Size(75, 23);
@@ -373,7 +360,7 @@
             // groupBox4
             // 
             this.groupBox4.Controls.Add(this.btnFormat);
-            this.groupBox4.Controls.Add(this.btnErase);
+            this.groupBox4.Controls.Add(this.btnWipe);
             this.groupBox4.Controls.Add(this.btnWrite);
             this.groupBox4.Controls.Add(this.btnRead);
             this.groupBox4.Controls.Add(this.btnStop);
@@ -386,6 +373,7 @@
             // 
             // btnFormat
             // 
+            this.btnFormat.Enabled = false;
             this.btnFormat.Location = new System.Drawing.Point(169, 20);
             this.btnFormat.Name = "btnFormat";
             this.btnFormat.Size = new System.Drawing.Size(75, 23);
@@ -394,19 +382,21 @@
             this.btnFormat.UseVisualStyleBackColor = true;
             this.btnFormat.Click += new System.EventHandler(this.btnFormat_Click);
             // 
-            // btnErase
+            // btnWipe
             // 
-            this.btnErase.Location = new System.Drawing.Point(250, 20);
-            this.btnErase.Name = "btnErase";
-            this.btnErase.Size = new System.Drawing.Size(75, 23);
-            this.btnErase.TabIndex = 7;
-            this.btnErase.Text = "Erase";
-            this.btnErase.UseVisualStyleBackColor = true;
-            this.btnErase.Visible = false;
-            this.btnErase.Click += new System.EventHandler(this.btnErase_Click);
+            this.btnWipe.Enabled = false;
+            this.btnWipe.Location = new System.Drawing.Point(250, 20);
+            this.btnWipe.Name = "btnWipe";
+            this.btnWipe.Size = new System.Drawing.Size(75, 23);
+            this.btnWipe.TabIndex = 7;
+            this.btnWipe.Text = "Wipe";
+            this.btnWipe.UseVisualStyleBackColor = true;
+            this.btnWipe.Visible = false;
+            this.btnWipe.Click += new System.EventHandler(this.btnWipe_Click);
             // 
             // btnWrite
             // 
+            this.btnWrite.Enabled = false;
             this.btnWrite.Location = new System.Drawing.Point(88, 20);
             this.btnWrite.Name = "btnWrite";
             this.btnWrite.Size = new System.Drawing.Size(75, 23);
@@ -449,7 +439,7 @@
         #endregion
 
         private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.ComboBox lstSDDrive;
+        private System.Windows.Forms.ComboBox lstDiskDrive;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.Button btnChooseFile;
         private System.Windows.Forms.TextBox txtFilename;
@@ -459,7 +449,7 @@
         private System.Windows.Forms.Button btnStop;
         private System.Windows.Forms.Label lblVolume;
         private System.Windows.Forms.Label lblPartition;
-        private System.Windows.Forms.Label lblPhysicalDrive;
+        private System.Windows.Forms.Label lblInterfaceType;
         private System.Windows.Forms.Label lblPhysicalDriveSize;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label3;
@@ -478,8 +468,7 @@
         private System.Windows.Forms.Button btnWrite;
         private System.Windows.Forms.Label lblModel;
         private System.Windows.Forms.Label label9;
-        private System.Windows.Forms.CheckBox chkLL;
-        private System.Windows.Forms.Button btnErase;
+        private System.Windows.Forms.Button btnWipe;
         private System.Windows.Forms.Button btnFormat;
     }
 }

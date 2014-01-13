@@ -1,10 +1,12 @@
-﻿using System;
+﻿using OSX.IOlib;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
@@ -17,6 +19,8 @@ namespace SDImager
 {
     public partial class frmMain : Form
     {
+        bool m_DrivesFound;
+        DateTime m_LastDriveChange;
         CancellationTokenSource cts;
         string Operation;
 
@@ -27,26 +31,56 @@ namespace SDImager
 
         private void DriveChanged(object sender, EventArgs e)
         {
-            Invoke(new Action(FillSDDrives));
+            Debug.WriteLine(DateTime.Now);
+            //if ((DateTime.Now - m_LastDriveChange).TotalMilliseconds > 2000)
+            {
+                m_LastDriveChange = DateTime.Now;
+                FillDriveList();
+            }
         }
 
         private void frmMain_Load(object sender, EventArgs e)
         {
 #if DEBUG
-            btnErase.Visible = true;
-            chkLL.Visible = true;
+            btnWipe.Visible = true;
 #endif
             DriveTools.StartDriveChangeNotification(DriveChanged);
-            FillSDDrives();
+            FillDriveList();
             ResetProgress();
-            lstSDDrive_SelectedIndexChanged(sender, e);
         }
 
-        private void FillSDDrives()
+        private void FillDriveList()
         {
-            lstSDDrive.DataSource = DriveTools.GetRemovableVolumes(chkLL.Checked).ToList();
-            lstSDDrive_SelectedIndexChanged(this, EventArgs.Empty);
-            lstSDDrive.Refresh();
+            Task.Run(new Action(LoadDiskDrives));
+        }
+
+        private void LoadDiskDrives()
+        {
+            m_DrivesFound = false;
+            BeginInvoke(new Action(() =>
+            {
+                lstDiskDrive.DataSource = null;
+                lstDiskDrive.Items.Clear();
+                lstDiskDrive.Items.Add("(loading...)");
+                lstDiskDrive.SelectedIndex = 0;
+                lstDiskDrive.Refresh();
+            }));
+            WmiInfo.LoadDiskInfo();
+            BeginInvoke(new Action(() =>
+            {
+                var l = DriveTools.GetRemovableDiskDrives().ToList();
+                lstDiskDrive.Items.Clear();
+                if (l.Count == 0)
+                    lstDiskDrive.Items.Add("(No removable disk drives found)");
+                else
+                {
+                    lstDiskDrive.DataSource = l;
+                    m_DrivesFound = true;
+                }
+                lstDiskDrive.SelectedIndex = 0;
+                lstDiskDrive_SelectedIndexChanged(this, EventArgs.Empty);
+                lstDiskDrive.Refresh();
+            }));
         }
 
         private void btnChooseFile_Click(object sender, EventArgs e)
@@ -58,10 +92,26 @@ namespace SDImager
             }
         }
 
+        private bool TryLockVolumes(DiskDrive disk)
+        {
+            try
+            {
+                disk.LockVolumes();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(string.Format("Could not lock volume(s) on disk drive {0}. Please ensure that no other program is accessing this drive.\n\nException: {1}",
+                    disk.ID, ex.Message), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+
+            }
+        }
+
         private async void btnRead_Click(object sender, EventArgs e)
         {
-            VolumeInfo vi = (VolumeInfo)lstSDDrive.SelectedItem;
-            if (!CheckFilename(txtFilename.Text, vi, true))
+            DiskDrive dd = (DiskDrive)lstDiskDrive.SelectedItem;
+            if (!CheckFilename(txtFilename.Text, dd, true))
             {
                 txtFilename.Focus();
                 return;
@@ -69,40 +119,38 @@ namespace SDImager
             var filename = Path.GetFullPath(txtFilename.Text);
 
             Operation = "Reading";
+            if (!TryLockVolumes(dd)) return;
             SetButtons(false);
-
-            var dest = new FileStream(txtFilename.Text, FileMode.Create, FileAccess.Write, FileShare.None);
-            var source = vi.GetPhysicalDriveStream(FileAccess.Read);
-            vi.LockVolume();
-
-            progress.Maximum = (int)(vi.PhysicalDriveSize / (1024 * 1024)) + 1;
-            progress.Value = 0;
-            cts = new CancellationTokenSource();
-            try
+            using (Stream dest = new FileStream(txtFilename.Text, FileMode.Create, FileAccess.Write, FileShare.None),
+                source = dd.CreateStream(FileAccess.Read))
             {
-                await CopyStreamAsync(source, dest, (long)vi.PhysicalDriveSize, cts.Token);
+                progress.Maximum = (int)(dd.GetDriveSize() / (1024 * 1024)) + 1;
+                progress.Value = 0;
+                cts = new CancellationTokenSource();
+                try
+                {
+                    await CopyStreamAsync(source, dest, (long)dd.GetDriveSize(), cts.Token, null);
+                }
+                catch (Exception ex)
+                {
+                    if (!(ex is OperationCanceledException))
+                        MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
+                    cts.Cancel();
+                }
             }
-            catch (Exception ex)
-            {
-                if (!(ex is OperationCanceledException))
-                    MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
-                cts.Cancel();
-            }
-            ResetProgress();
-            vi.UnlockVolume();
-            vi.CloseHandles();
-            dest.Close();
+            dd.UnlockVolumes();
+
             if (!cts.IsCancellationRequested)
                 MessageBox.Show("Reading complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ResetProgress();
             SetButtons(true);
             cts = null;
-            this.Text = Application.ProductName;
         }
 
         private async void btnWrite_Click(object sender, EventArgs e)
         {
-            VolumeInfo vi = (VolumeInfo)lstSDDrive.SelectedItem;
-            if (!CheckFilename(txtFilename.Text, vi, false))
+            DiskDrive dd = (DiskDrive)lstDiskDrive.SelectedItem;
+            if (!CheckFilename(txtFilename.Text, dd, false))
             {
                 txtFilename.Focus();
                 return;
@@ -112,40 +160,39 @@ namespace SDImager
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == System.Windows.Forms.DialogResult.No) return;
 
             Operation = "Writing";
+            if (!TryLockVolumes(dd)) return;
             SetButtons(false);
-
-            var source = new FileStream(txtFilename.Text, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var dest = vi.GetPhysicalDriveStream(FileAccess.Write);
-            vi.LockVolume();
-            vi.DismountVolume();
-
-            progress.Maximum = (int)(source.Length / (1024 * 1024)) + 1;
-            progress.Value = 0;
-            cts = new CancellationTokenSource();
-            try
+            using (Stream source = new FileStream(txtFilename.Text, FileMode.Open, FileAccess.Read, FileShare.Read),
+                    dest = dd.CreateStream(FileAccess.Write))
             {
-                await CopyStreamAsync(source, dest, source.Length, cts.Token);
+                progress.Maximum = (int)(source.Length / (1024 * 1024)) + 1;
+                progress.Value = 0;
+                cts = new CancellationTokenSource();
+                try
+                {
+                    await CopyStreamAsync(source, dest, source.Length, cts.Token, null);
+                }
+                catch (Exception ex)
+                {
+                    if (!(ex is OperationCanceledException))
+                        MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
+                    cts.Cancel();
+                }
             }
-            catch (Exception ex)
-            {
-                if (!(ex is OperationCanceledException))
-                    MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
-                cts.Cancel();
-            }
-            ResetProgress();
-            vi.UnlockVolume();
-            vi.CloseHandles();
-            source.Close();
+            dd.DismountVolumes();
+            dd.UnlockVolumes();
+            dd.MountVolumes();
+
+            FillDriveList();
             if (!cts.IsCancellationRequested)
                 MessageBox.Show("Writing complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            SetButtons(true);
+            ResetProgress();
             cts = null;
-            this.Text = Application.ProductName;
         }
 
-        private bool CheckFilename(string filename, VolumeInfo vi, bool write)
+        private bool CheckFilename(string filename, DiskDrive dd, bool write)
         {
-            if (vi == null)
+            if (dd == null)
             {
                 MessageBox.Show("Choose valid SD drive first.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
@@ -156,7 +203,7 @@ namespace SDImager
                 return false;
             }
             filename = Path.GetFullPath(filename);
-            if (Path.GetPathRoot(filename).StartsWith(vi.VolumeID))
+            if (dd.Volumes.Any(z => z.Name == Path.GetPathRoot(filename)))
             {
                 MessageBox.Show("Image file must not be located on SD drive.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
@@ -177,23 +224,55 @@ namespace SDImager
             lblTimeRemaining.Text = lblSpeed.Text;
         }
 
-        private async Task CopyStreamAsync(Stream source, Stream dest, long count, CancellationToken token)
+        private async Task CopyStreamAsync(Stream source, Stream dest, long count, CancellationToken token,
+            Action<long> ProgressChanged)
         {
-            byte[] buf = new byte[1024 * 1024];
+            byte[][] buf = new byte[2][];
+            buf[0] = new byte[1024 * 1024];
+            buf[1] = new byte[1024 * 1024];
             var oldCaption = this.Text;
 
             int len = 0, lasti = 0;
+            Task writeTask;
+            Task<int> readTask;
+            long remaining = count, written = 0;
             Stopwatch sw = Stopwatch.StartNew();
+            if (ProgressChanged != null)
+                ProgressChanged(0);
+
+            int bufIdx = 0;
+
+            // initially start read task
+            readTask = source.ReadAsync(buf[bufIdx], 0, (int)Math.Min(remaining, buf[0].Length));
             do
             {
+                // check token for cancellation
                 token.ThrowIfCancellationRequested();
-                len = await source.ReadAsync(buf, 0, (int)Math.Min(count, buf.Length));
-                count -= len;
-                await dest.WriteAsync(buf, 0, len);
 
+                // wait for read task
+                len = await readTask;
+                remaining -= len;
+                written += len;
+
+                // start write task because reading is finished
+                writeTask = dest.WriteAsync(buf[bufIdx], 0, len);
+
+                // switch buffers
+                bufIdx = (bufIdx + 1) % 2;
+
+                // start next read task if necessary
+                if (remaining > 0)
+                    readTask = source.ReadAsync(buf[bufIdx], 0, (int)Math.Min(remaining, buf[0].Length));
+
+                // wait for write task
+                await writeTask;
+
+                //update progress
                 progress.Value += 1;
-                if (sw.ElapsedMilliseconds >= 1000)
+                if (sw.ElapsedMilliseconds >= 500)
                 {
+                    if (ProgressChanged != null)
+                        ProgressChanged(written);
                     double speed = (progress.Value - lasti) / sw.Elapsed.TotalSeconds;
                     lblSpeed.Text = string.Format("{0:N1} MB/s", speed);
                     lblByteRemaining.Text = string.Format("{0:N0} MB", progress.Maximum - progress.Value);
@@ -203,7 +282,14 @@ namespace SDImager
                     lasti = progress.Value;
                     sw.Restart();
                 }
-            } while (count > 0);
+            } while (remaining > 0);
+
+            if (ProgressChanged != null)
+                ProgressChanged(count);
+
+            progress.Value = progress.Maximum;
+            lblByteRemaining.Text = string.Format("0 MB");
+            progress.Refresh();
             sw.Stop();
             this.Text = oldCaption;
         }
@@ -218,14 +304,14 @@ namespace SDImager
 
         private void SetButtons(bool p)
         {
-            btnRead.Enabled = p;
-            btnWrite.Enabled = p;
-            btnErase.Enabled = p;
-            btnFormat.Enabled = p && !chkLL.Checked;
+            bool b = lstDiskDrive.SelectedIndex >= 0 && m_DrivesFound;
+            btnRead.Enabled = p && b;
+            btnWrite.Enabled = p && b;
+            btnWipe.Enabled = p && b;
+            btnFormat.Enabled = p && b;
             txtFilename.Enabled = p;
             btnChooseFile.Enabled = p;
-            lstSDDrive.Enabled = p;
-            chkLL.Enabled = p;
+            lstDiskDrive.Enabled = p;
             btnStop.Text = p ? "Exit" : "Cancel";
         }
 
@@ -234,95 +320,96 @@ namespace SDImager
             DriveTools.StopDriveChangeNotification();
         }
 
-        private void lstSDDrive_SelectedIndexChanged(object sender, EventArgs e)
+        private void lstDiskDrive_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var vi = (VolumeInfo)lstSDDrive.SelectedItem;
-            if (vi == null)
+            SetButtons(true);
+            var dd = lstDiskDrive.SelectedItem as DiskDrive;
+            if (dd == null)
             {
                 lblVolume.Text = "(n/a)";
                 lblPartition.Text = lblVolume.Text;
-                lblPhysicalDrive.Text = lblVolume.Text;
+                lblInterfaceType.Text = lblVolume.Text;
                 lblPhysicalDriveSize.Text = lblVolume.Text;
                 lblFormat.Text = lblVolume.Text;
                 lblModel.Text = lblVolume.Text;
             }
             else
             {
-                lblVolume.Text = vi.VolumeID;
-                lblPartition.Text = vi.PartitionID;
-                lblPhysicalDrive.Text = vi.PhysicalDriveID;
-                lblPhysicalDriveSize.Text = string.Format("{0:N0} MB", vi.PhysicalDriveSize / (1024 * 1024));
-                lblModel.Text = vi.Model;
-                try
+                if (dd.Volumes.Count() == 0)
                 {
-                    lblFormat.Text = vi.DriveInfo.DriveFormat;
+                    lblVolume.Text = "(none)";
+                    lblFormat.Text = "(none)";
                 }
-                catch
+                else
                 {
-                    lblFormat.Text = "(unknown)";
+                    lblVolume.Text = string.Join(", ", dd.Volumes);
+                    lblFormat.Text = string.Join(", ", dd.Volumes.Select(z => z.FileSystem));
                 }
+
+                if (dd.DiskPartitions.Count() == 0)
+                    lblPartition.Text = "(none)";
+                else
+                    lblPartition.Text = string.Join(", ", dd.DiskPartitions);
+
+                lblInterfaceType.Text = dd.InterfaceType;
+                lblPhysicalDriveSize.Text = string.Format("{0:N0} MB", dd.GetDriveSize() / (1024 * 1024));
+                lblModel.Text = dd.Model;
+                btnFormat.Enabled = dd.Volumes.Count() == 1;
             }
 
         }
 
-        private void chkLL_CheckedChanged(object sender, EventArgs e)
+        private async void btnWipe_Click(object sender, EventArgs e)
         {
-            SetButtons(true);
-            FillSDDrives();
-        }
-
-        private async void btnErase_Click(object sender, EventArgs e)
-        {
-            VolumeInfo vi = (VolumeInfo)lstSDDrive.SelectedItem;
-            if (vi == null)
+            DiskDrive dd = (DiskDrive)lstDiskDrive.SelectedItem;
+            if (dd == null)
             {
                 MessageBox.Show("Choose valid SD drive first.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            if (MessageBox.Show("All data on SD card will be erased. Are you sure?", "Warning",
+            if (MessageBox.Show("All data on SD card will be erased and partitions deleted. Are you sure?", "Warning",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == System.Windows.Forms.DialogResult.No) return;
 
-            Operation = "Erasing";
+            Operation = "Wiping";
+            if (!TryLockVolumes(dd)) return;
             SetButtons(false);
-
-            var source = new ConstantStream(0xff);
-            var dest = vi.GetPhysicalDriveStream(FileAccess.Write);
-            vi.LockVolume();
-            vi.DismountVolume();
-
-            var mbr = Properties.Resources.MBR;
-            dest.Write(mbr, 0, mbr.Length);
-
-            progress.Value = 0;
-            progress.Maximum = (int)((vi.PhysicalDriveSize - mbr.Length) / (1024 * 1024)) + 1;
-
-            cts = new CancellationTokenSource();
-            try
+            using (Stream source = new ConstantStream(0xff), dest = dd.CreateStream(FileAccess.Write))
             {
-                await CopyStreamAsync(source, dest, (long)vi.PhysicalDriveSize - mbr.Length, cts.Token);
+                var mbr = Properties.Resources.MBR;
+                dest.Write(mbr, 0, mbr.Length);
+
+                progress.Value = 0;
+                progress.Maximum = (int)(((long)dd.GetDriveSize() - mbr.Length) / (1024 * 1024)) + 1;
+
+                cts = new CancellationTokenSource();
+                try
+                {
+                    await CopyStreamAsync(source, dest, (long)dd.GetDriveSize() - mbr.Length, cts.Token, null);
+                }
+                catch (Exception ex)
+                {
+                    if (!(ex is OperationCanceledException))
+                        MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
+                    cts.Cancel();
+                }
             }
-            catch (Exception ex)
-            {
-                if (!(ex is OperationCanceledException))
-                    MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK);
-                cts.Cancel();
-            }
+            dd.DismountVolumes();
+            dd.UnlockVolumes();
+            dd.MountVolumes();
             ResetProgress();
-            vi.UnlockVolume();
-            vi.CloseHandles();
-            source.Close();
+
+            FillDriveList();
             if (!cts.IsCancellationRequested)
                 MessageBox.Show("Erasing complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
             SetButtons(true);
             cts = null;
-            this.Text = Application.ProductName;
         }
 
         private async void btnFormat_Click(object sender, EventArgs e)
         {
-            VolumeInfo vi = (VolumeInfo)lstSDDrive.SelectedItem;
-            if (vi == null)
+            DiskDrive dd = (DiskDrive)lstDiskDrive.SelectedItem;
+            if (dd == null)
             {
                 MessageBox.Show("Choose valid SD drive first.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
@@ -336,20 +423,29 @@ namespace SDImager
             this.Text += " (Formatting)";
             lblSpeed.Text = "Windows is formatting the drive...";
             cts = new CancellationTokenSource();
-            var dest = vi.GetPhysicalDriveStream(FileAccess.Write);
-            //vi.LockVolume();
-            //vi.DismountVolume();
-            progress.Value = 0;
-            progress.Maximum = 100;
-            await Task.Run(() => vi.Format(ProgressHandler, cts.Token));
-            //vi.UnlockVolume();
-            vi.CloseHandles();
+
+            using (Stream dest = dd.CreateStream(FileAccess.Write))
+            {
+                progress.Value = 0;
+                progress.Maximum = 100;
+                //await Task.Run(() => dd.Format(ProgressHandler, cts.Token));
+                try
+                {
+                    await Task.Run(() => dd.Volumes.First().Format("FAT32", true), cts.Token);
+                }
+                catch (Exception ex)
+                {
+                    if (!(ex is OperationCanceledException))
+                        MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    cts.Cancel();
+                }
+            }
+            ResetProgress();
+
+            FillDriveList();
             if (!cts.IsCancellationRequested)
                 MessageBox.Show("Formatting complete.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            ResetProgress();
-            SetButtons(true);
             cts = null;
-            this.Text = Application.ProductName;
         }
 
         private void ProgressHandler(object sender, ProgressEventArgs e)

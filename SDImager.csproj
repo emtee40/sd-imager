@@ -80,7 +80,16 @@
     <Compile Include="frmMain.Designer.cs">
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
-    <Compile Include="IOWrapper.cs" />
+    <Compile Include="IOlib\BaseObject.cs" />
+    <Compile Include="IOlib\DiskPartition.cs" />
+    <Compile Include="IOlib\FileHandleBaseObject.cs" />
+    <Compile Include="IOlib\LogicalDisk.cs" />
+    <Compile Include="IOlib\WmiClassAttribute.cs" />
+    <Compile Include="IOlib\DiskDrive.cs" />
+    <Compile Include="IOlib\Volume.cs" />
+    <Compile Include="IOlib\WmiInfo.cs" />
+    <Compile Include="IOlib\WmiPropertyAttribute.cs" />
+    <Compile Include="IOlib\IOWrapper.cs" />
     <Compile Include="ConstantStream.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
