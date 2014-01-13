@@ -8,7 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace OSX.IOlib
+namespace OSX.WmiLib
 {
     public class IOWrapper
     {

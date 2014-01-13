@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OSX.IOlib
+namespace OSX.WmiLib
 {
     [WmiClass("Win32_LogicalDisk")]
-    internal class LogicalDisk : BaseObject<LogicalDisk>
+    internal class LogicalDisk : WmiObject<LogicalDisk>
     {
         [WmiProperty]
         public string Description { get; private set; }
@@ -25,6 +25,21 @@ namespace OSX.IOlib
         [WmiProperty]
         public string VolumeName { get; private set; }
 
-        public Volume Volume { get { return Volume.Find(ID + @"\"); } }
+        private string m_VolumeID;
+
+        public Volume Volume
+        {
+            get
+            {
+                if (m_VolumeID == null)
+                {
+                    var v = CreationContext.Instances<Volume>().Where(z => z.Name == this.ID + @"\").FirstOrDefault();
+                    m_VolumeID = v.ID;
+                    return v;
+                }
+                else
+                    return Volume.Find(m_VolumeID);
+            }
+        }
     }
 }

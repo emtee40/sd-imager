@@ -7,10 +7,10 @@ using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OSX.IOlib
+namespace OSX.WmiLib
 {
-    [WmiClass("Win32_Volume", "Name")]
-    internal class Volume : FileHandleBaseObject<Volume>
+    [WmiClass("Win32_Volume")]
+    internal class Volume : WmiFileHandleObject<Volume>
     {
         [WmiProperty]
         public bool Automount { get; private set; }
@@ -42,6 +42,13 @@ namespace OSX.IOlib
         public bool PageFilePresent { get; private set; }
         [WmiProperty]
         public uint SerialNumber { get; private set; }
+
+        public IEnumerable<Directory> MountPoints { get { return GetAssociators<Directory>(); } }
+
+        public static Volume FindName(string NameToFind)
+        {
+            return AsEnumerable().FirstOrDefault(z => z.Name == NameToFind);
+        }
 
         private SafeFileHandle m_LockHandle;
         public SafeFileHandle GetLockHandle()

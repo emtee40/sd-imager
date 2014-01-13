@@ -7,10 +7,10 @@ using System.Management;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OSX.IOlib
+namespace OSX.WmiLib
 {
     [WmiClass("Win32_DiskDrive")]
-    internal class DiskDrive : FileHandleBaseObject<DiskDrive>
+    internal class DiskDrive : WmiFileHandleObject<DiskDrive>
     {
         [WmiProperty]
         public string InterfaceType { get; private set; }

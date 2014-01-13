@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OSX.IOlib
+namespace OSX.WmiLib
 {
     internal static class WmiInfo
     {
@@ -23,7 +23,7 @@ namespace OSX.IOlib
 
         public static void Reset()
         {
-            foreach (Type t in Assembly.GetExecutingAssembly().GetTypes().Where(z => !z.IsGenericTypeDefinition && z.IsSubclassOf(typeof(BaseObject))))
+            foreach (Type t in Assembly.GetExecutingAssembly().GetTypes().Where(z => !z.IsGenericTypeDefinition && z.IsSubclassOf(typeof(WmiObject))))
             {
                 var mi = t.GetMethod("Reset", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
                 if (mi != null)

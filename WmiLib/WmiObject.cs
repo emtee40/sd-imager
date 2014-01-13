@@ -8,14 +8,28 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Collections;
 
-namespace OSX.IOlib
+namespace OSX.WmiLib
 {
     [DebuggerDisplay("{ID}")]
-    internal abstract class BaseObject
+    internal abstract class WmiObject
     {
         protected ManagementObject m_wmiObject;
-        protected Dictionary<Type, IEnumerable<object>> m_Associators;
-        public object ID { get { return GetKey(); } }
+        protected WmiContext m_Context;
+        protected Dictionary<Type, IEnumerable<string>> m_Associators;
+        public string ID { get { return GetKey(); } }
+
+        public static T CreateObject<T>(WmiContext context, ManagementObject wmiObject)
+            where T : WmiObject, new()
+        {
+            var r = new T();
+            r.m_Context = context;
+            r.m_wmiObject = wmiObject;
+            r.OnLoadProperties();
+            r.OnCreated();
+            return r;
+        }
+
+        public WmiContext CreationContext { get { return m_Context; } }
 
         #region Get
         protected T Get<T>(ManagementBaseObject Object, string Property)
@@ -60,21 +74,48 @@ namespace OSX.IOlib
             return m_wmiObject.InvokeMethod(MethodName, parameters);
         }
 
-        protected virtual object GetKey()
+        protected virtual string GetKey()
         {
-            var a = GetKeyProperty();
-            return a == null ? Get<object>("Name") : Get<object>(a);
+            var a = GetKeyPropertyName();
+            return a == null ? Get<string>("Name") : Get<string>(a);
         }
 
-        public string GetKeyProperty()
+        public string GetKeyPropertyName()
         {
-            var a = GetType().GetCustomAttribute<WmiClassAttribute>();
+            return GetKeyPropertyName(GetType());
+        }
+
+        public static string GetKeyPropertyName(Type type)
+        {
+            var a = type.GetCustomAttribute<WmiClassAttribute>();
             return a == null ? null : a.KeyProperty;
+        }
+
+        public static IEnumerable<string> GetWmiPropertyNames(Type type)
+        {
+            var r = new List<string>();
+            if (!type.IsSubclassOf(typeof(WmiObject)))
+                return null;
+
+            r.Add(GetKeyPropertyName(type));
+            foreach (PropertyInfo pi in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                var a = pi.GetCustomAttribute<WmiPropertyAttribute>();
+                if (a != null)
+                    if (!r.Contains(a.Property ?? pi.Name))
+                        r.Add(a.Property ?? pi.Name);
+            }
+            return r;
         }
 
         public string GetClassName()
         {
-            var a = GetType().GetCustomAttribute<WmiClassAttribute>();
+            return GetClassName(GetType());
+        }
+
+        public static string GetClassName(Type type)
+        {
+            var a = type.GetCustomAttribute<WmiClassAttribute>();
             return a == null ? null : a.ClassName;
         }
 
@@ -101,17 +142,20 @@ namespace OSX.IOlib
             return ID.ToString();
         }
 
-        protected static string GetWmiQueryValue(object value)
+        public static string GetWmiQueryValue(object value)
         {
-            return value.ToString().Replace(@"\", @"\\");
+            if (value is string)
+                return value.ToString().Replace(@"\", @"\\");
+            else
+                return value.ToString();
         }
     }
 
-    internal abstract class BaseObject<TObject> : BaseObject
-        where TObject : BaseObject<TObject>
+    internal abstract class WmiObject<TObject> : WmiObject
+        where TObject : WmiObject<TObject>
     {
-        private static Dictionary<object, TObject> m_Cache;
-        private static Dictionary<object, TObject> Cache { get { if (m_Cache == null) CreateCache(); return m_Cache; } }
+        private static Dictionary<string, TObject> m_Cache;
+        private static Dictionary<string, TObject> Cache { get { if (m_Cache == null) CreateCache(); return m_Cache; } }
 
         public static IEnumerable<TObject> AsEnumerable()
         {
@@ -128,7 +172,7 @@ namespace OSX.IOlib
 
         private static void CreateCache()
         {
-            m_Cache = new Dictionary<object, TObject>();
+            m_Cache = new Dictionary<string, TObject>();
         }
 
         private static void LoadAllObjects()
@@ -172,48 +216,40 @@ namespace OSX.IOlib
         }
 
         protected void AddAssociators<T>()
-            where T : BaseObject<T>
+            where T : WmiObject<T>, new()
         {
-            var a0 = GetType().GetCustomAttribute<WmiClassAttribute>();
-            if (a0 == null)
-                throw new ArgumentException("Attribute missing");
-
-            var a1 = typeof(T).GetCustomAttribute<WmiClassAttribute>();
-            if (a1 == null)
-                throw new ArgumentException("Attribute missing");
-
             if (m_Associators == null)
-                m_Associators = new Dictionary<Type, IEnumerable<object>>();
+                m_Associators = new Dictionary<Type, IEnumerable<string>>();
 
-            var os = new ManagementObjectSearcher(string.Format("ASSOCIATORS OF {{{0}.{1}=\"{2}\"}} WHERE ResultClass={3}",
-                a0.ClassName, a0.KeyProperty, GetWmiQueryValue(GetKey()), a1.ClassName));
-            os.Options.DirectRead = true;
-            os.Options.ReturnImmediately = false;
-
-            var l = new List<object>();
-            foreach (ManagementObject o in os.Get().Cast<ManagementObject>())
-                l.Add(o[a1.KeyProperty]);
+            var l = new List<string>();
+            l.AddRange(this.Associators<T>().Select(z => z.ID));
 
             m_Associators.Add(typeof(T), l);
         }
 
         public IEnumerable<T> GetAssociators<T>()
-            where T : BaseObject<T>
+            where T : WmiObject<T>, new()
         {
             if (m_Associators == null || !m_Associators.ContainsKey(typeof(T)))
                 AddAssociators<T>();
-            return m_Associators[typeof(T)].Select(z => BaseObject<T>.Find(z)).Where(z => z != null);
+            return m_Associators[typeof(T)].Select(z => WmiObject<T>.Find(z)).Where(z => z != null);
         }
 
-        public static TObject Find(object Key)
+        public static TObject Find(string Key)
         {
-            TObject o = default(TObject);
+            TObject o;
             if (!Cache.ContainsKey(Key))
                 LoadObject(Key);
             Cache.TryGetValue(Key, out o);
             return o;
         }
 
+        protected override void OnCreated()
+        {
+            base.OnCreated();
+            Cache.Remove(this.ID);
+            Cache.Add(this.ID, (TObject)this);
+        }
         public static void Reset()
         {
             m_Cache = null;
