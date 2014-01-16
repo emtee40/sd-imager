@@ -53,8 +53,8 @@ namespace SDImager
             btnWipe.Visible = true;
 #endif
             DriveTools.StartDriveChangeNotification(DriveChanged);
-            FillDriveList();
             ResetProgress();
+            FillDriveList();
         }
 
         private void FillDriveList()
@@ -66,7 +66,7 @@ namespace SDImager
         {
             m_DrivesFound = false;
             string m_SelectedID = null;
-            Invoke(new Action(() =>
+            BeginInvoke(new Action(() =>
             {
                 if (lstDiskDrive.SelectedItem != null)
                     m_SelectedID = lstDiskDrive.SelectedItem.ToString();
@@ -74,8 +74,11 @@ namespace SDImager
                 lstDiskDrive.Items.Clear();
                 lstDiskDrive.Items.Add("(loading...)");
                 lstDiskDrive.SelectedIndex = 0;
-                lstDiskDrive.Refresh();
-                WmiInfo.LoadDiskInfo();
+                this.Refresh();
+            }));
+            WmiInfo.LoadDiskInfo();
+            BeginInvoke(new Action(() =>
+            {
                 var l = DriveTools.GetRemovableDiskDrives().OrderBy(z => z.ID).ToList();
                 lstDiskDrive.Items.Clear();
                 if (l.Count == 0)
@@ -368,7 +371,7 @@ namespace SDImager
                 lblInterfaceType.Text = dd.InterfaceType;
                 lblPhysicalDriveSize.Text = string.Format("{0:N0} MB", dd.GetDriveSize() / (1024 * 1024));
                 lblModel.Text = dd.Model;
-                btnFormat.Enabled = dd.Volumes.Count() == 1;
+                btnFormat.Enabled = dd.Volumes.Count() <= 1;
             }
 
         }
@@ -423,6 +426,7 @@ namespace SDImager
         private async void btnFormat_Click(object sender, EventArgs e)
         {
             DiskDrive dd = (DiskDrive)lstDiskDrive.SelectedItem;
+
             if (dd == null)
             {
                 MessageBox.Show("Choose valid SD drive first.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -434,25 +438,50 @@ namespace SDImager
 
             SetButtons(false);
 
+            //if (dd.Volumes.Count() == 0)
+            {
+                var handle = dd.CreateHandle(FileAccess.ReadWrite);
+                var x = IOWrapper.DiskGetDriveLayoutEx(handle);
+                IOWrapper.DiskCreateDiskMBR(handle, 0xa5a5a5);
+                IOWrapper.DiskUpdateProperties(handle);
+                x = IOWrapper.DiskGetDriveLayoutEx(handle);
+                x.PartitionEntry[0].PartitionNumber = 1;
+                x.PartitionEntry[0].StartingOffset = 4 * 512;
+                x.PartitionEntry[0].PartitionLength = (long)dd.GetDriveSize() - x.PartitionEntry[0].StartingOffset;
+                x.PartitionEntry[0].RewritePartition = true;
+                x.PartitionEntry[0].Mbr.PartitionType = (byte)IOWrapper.Partition.FAT32;
+                IOWrapper.DiskSetDriveLayoutEx(handle, x);
+                IOWrapper.DiskUpdateProperties(handle);
+                x = IOWrapper.DiskGetDriveLayoutEx(handle);
+                //IOWrapper.StorageLoadMedia(handle);
+                handle.Close();
+
+                var driveID = dd.ID;
+                WmiInfo.LoadDiskInfo();
+                dd = dd.CreationContext.DiskDrives.FirstOrDefault(z => z.ID == driveID);
+            }
+
             this.Text += " (Formatting)";
             lblSpeed.Text = "Windows is formatting the drive...";
             cts = new CancellationTokenSource();
 
-            using (Stream dest = dd.CreateStream(FileAccess.Write))
+            progress.Value = 0;
+            progress.Maximum = 100;
+            //await Task.Run(() => dd.Format(ProgressHandler, cts.Token));
+            try
             {
-                progress.Value = 0;
-                progress.Maximum = 100;
-                //await Task.Run(() => dd.Format(ProgressHandler, cts.Token));
-                try
+                var vol = dd.Volumes.FirstOrDefault();
+                if (vol != null)
                 {
+                    vol.Mount();
                     await Task.Run(() => dd.Volumes.First().Format("FAT32", true), cts.Token);
                 }
-                catch (Exception ex)
-                {
-                    if (!(ex is OperationCanceledException))
-                        MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    cts.Cancel();
-                }
+            }
+            catch (Exception ex)
+            {
+                if (!(ex is OperationCanceledException))
+                    MessageBox.Show(ex.Message, "Exception", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                cts.Cancel();
             }
             ResetProgress();
 
