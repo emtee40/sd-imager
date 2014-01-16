@@ -23,7 +23,17 @@ namespace OSX.WmiLib
 
         public static void Reset()
         {
-            foreach (Type t in Assembly.GetExecutingAssembly().GetTypes().Where(z => !z.IsGenericTypeDefinition && z.IsSubclassOf(typeof(WmiObject))))
+            Type[] types;
+            try
+            {
+                types = Assembly.GetExecutingAssembly().GetTypes();
+            }
+            catch (ReflectionTypeLoadException e)
+            {
+                types = e.Types;
+            }
+
+            foreach (Type t in types.Where(z => z != null && !z.IsGenericTypeDefinition && z.IsSubclassOf(typeof(WmiObject))))
             {
                 var mi = t.GetMethod("Reset", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
                 if (mi != null)

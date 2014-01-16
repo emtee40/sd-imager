@@ -45,10 +45,10 @@ namespace OSX.WmiLib
 
         public IEnumerable<Directory> MountPoints { get { return GetAssociators<Directory>(); } }
 
-        public static Volume FindName(string NameToFind)
-        {
-            return AsEnumerable().FirstOrDefault(z => z.Name == NameToFind);
-        }
+        //public static Volume FindName(string NameToFind)
+        //{
+        //    return AsEnumerable().FirstOrDefault(z => z.Name == NameToFind);
+        //}
 
         private SafeFileHandle m_LockHandle;
         public SafeFileHandle GetLockHandle()

@@ -157,6 +157,7 @@ namespace OSX.WmiLib
         private static Dictionary<string, TObject> m_Cache;
         private static Dictionary<string, TObject> Cache { get { if (m_Cache == null) CreateCache(); return m_Cache; } }
 
+        [Obsolete("Use WmiContext.Instance<T>() instead")]
         public static IEnumerable<TObject> AsEnumerable()
         {
             Reset();
@@ -164,6 +165,7 @@ namespace OSX.WmiLib
             return Cache.Values;
         }
 
+        [Obsolete("Use WmiContext.Instance<T>() instead")]
         public static void FillCache()
         {
             Reset();
