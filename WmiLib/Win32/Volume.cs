@@ -1,64 +1,39 @@
 ﻿using Microsoft.Win32.SafeHandles;
+using OSX.WmiLib.Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace OSX.WmiLib
+namespace OSX.WmiLib.Win32
 {
-    [WmiClass("Win32_Volume")]
-    internal class Volume : WmiFileHandleObject<Volume>
+    [WmiClass(@"Root\CIMV2:Win32_Volume")]
+    public class Volume : WmiFileHandleObject
     {
-        [WmiProperty]
-        public bool Automount { get; private set; }
-        [WmiProperty]
-        public ulong BlockSize { get; private set; }
-        [WmiProperty]
-        public bool BootVolume { get; private set; }
-        [WmiProperty]
-        public ulong Capacity { get; private set; }
-        [WmiProperty]
-        public string Name { get; private set; }
-        [WmiProperty]
-        public bool Compressed { get; private set; }
-        [WmiProperty]
-        public string DeviceID { get; private set; }
-        [WmiProperty]
-        public string DriveLetter { get; private set; }
-        [WmiProperty]
-        public DriveType DriveType { get; private set; }
-        [WmiProperty]
-        public string FileSystem { get; private set; }
-        [WmiProperty]
-        public ulong FreeSpace { get; private set; }
-        [WmiProperty]
-        public string Label { get; private set; }
-        [WmiProperty]
-        public uint MaximumFileNameLength { get; private set; }
-        [WmiProperty]
-        public bool PageFilePresent { get; private set; }
-        [WmiProperty]
-        public uint SerialNumber { get; private set; }
+        public bool? Automount => _getter();
+        public ulong? BlockSize => _getter();
+        public bool? BootVolume => _getter();
+        public ulong? Capacity => _getter();
+        public string Name => _getter();
+        public bool? Compressed => _getter();
+        public string DeviceID => _getter();
+        public string DriveLetter => _getter();
+        public DriveType? DriveType => _getter();
+        public string FileSystem => _getter();
+        public ulong? FreeSpace => _getter();
+        public string Label => _getter();
+        public uint? MaximumFileNameLength => _getter();
+        public bool? PageFilePresent => _getter();
+        public uint? SerialNumber => _getter();
 
-        public IEnumerable<Directory> MountPoints { get { return GetAssociators<Directory>(); } }
-
-        //public static Volume FindName(string NameToFind)
-        //{
-        //    return AsEnumerable().FirstOrDefault(z => z.Name == NameToFind);
-        //}
+        public IEnumerable<Directory> MountPoints => GetAssociators<Directory>(); 
 
         private SafeFileHandle m_LockHandle;
-        public SafeFileHandle GetLockHandle()
-        {
-            return m_LockHandle;
-        }
+        public SafeFileHandle GetLockHandle() => m_LockHandle;
 
         public void Lock()
         {
-            if (m_LockHandle != null && m_LockHandle.IsInvalid)
+            if (m_LockHandle != null && !m_LockHandle.IsInvalid)
                 throw new InvalidOperationException("Volume already locked");
 
             var handle = CreateHandle(FileAccess.ReadWrite, FileShare.ReadWrite);
@@ -70,6 +45,7 @@ namespace OSX.WmiLib
         {
             if (m_LockHandle == null)
                 throw new InvalidOperationException("Volume was not locked");
+
             IOWrapper.UnlockVolume(m_LockHandle);
             m_LockHandle.Close();
             m_LockHandle = null;
@@ -103,14 +79,13 @@ namespace OSX.WmiLib
             }
         }
 
+        public bool Reset()
+        {
+            return (uint)Call("Reset", null) == 0;
+        }
+
         public void Format(string FileSystem = "NTFS", bool QuickFormat = false, uint ClusterSize = 0, string Label = "", bool EnableCompression = false)
         {
-            if (ClusterSize == 0)
-            {
-                var p = m_wmiObject.GetMethodParameters("Format");
-                ClusterSize = Get<uint>(p, "ClusterSize");
-            }
-
             var r = (uint)Call("Format", FileSystem, QuickFormat, ClusterSize, Label, EnableCompression);
             switch (r)
             {

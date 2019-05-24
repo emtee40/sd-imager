@@ -1,16 +1,11 @@
 ﻿using Microsoft.Win32.SafeHandles;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace OSX.WmiLib
 {
-    internal abstract class WmiFileHandleObject<T> : WmiObject<T>
-        where T: WmiObject<T>
+    public abstract class WmiFileHandleObject : WmiObject
     {
         public abstract string GetFilename();
         protected SafeHandle m_LastHandle;

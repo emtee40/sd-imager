@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SDImager
@@ -153,10 +150,7 @@ namespace SDImager
             args.X = p.X;
             args.Y = p.Y;
 
-            if (ElevatedDragDrop != null)
-            {
-                ElevatedDragDrop(this, args);
-            }
+            ElevatedDragDrop?.Invoke(this, args);
         }
     }
 
