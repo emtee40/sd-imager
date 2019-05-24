@@ -34,7 +34,7 @@ namespace SDImager
 
         public override bool CanSeek
         {
-            get { return false; }
+            get { return true; }
         }
 
         public override bool CanWrite
@@ -54,31 +54,20 @@ namespace SDImager
             get { return long.MaxValue; }
         }
 
-        public override void Flush()
-        {
+        public override void Flush() { }
 
-        }
-
-        public override long Position
-        {
-            get
-            {
-                return 0;
-            }
-            set
-            {
-
-            }
-        }
+        public override long Position { get; set; } = 0;
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            throw new NotImplementedException();
+            switch (origin)
+            {
+                case SeekOrigin.Begin: Position = offset; break;
+                case SeekOrigin.Current: Position += offset; break;
+            }
+            return Position;
         }
 
-        public override void SetLength(long value)
-        {
-
-        }
+        public override void SetLength(long value) { }
     }
 }

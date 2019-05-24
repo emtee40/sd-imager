@@ -125,9 +125,9 @@
             this.label5.Font = new System.Drawing.Font("Verdana", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label5.Location = new System.Drawing.Point(7, 64);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(58, 12);
+            this.label5.Size = new System.Drawing.Size(81, 12);
             this.label5.TabIndex = 9;
-            this.label5.Text = "Format(s):";
+            this.label5.Text = "File system(s):";
             // 
             // lblVolume
             // 
@@ -410,7 +410,7 @@
             this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(430, 421);
+            this.ClientSize = new System.Drawing.Size(426, 414);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);

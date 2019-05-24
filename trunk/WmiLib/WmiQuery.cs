@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace OSX.WmiLib
 {
-    internal class WmiQuery<TData> : IWmiQueryable<TData>
-        where TData : WmiObject<TData>, new()
+    public class WmiQuery<T> : IWmiQueryable<T>
+        where T : WmiObject
     {
         private Expression m_Expression;
         private WmiContext m_Context;
@@ -31,9 +31,9 @@ namespace OSX.WmiLib
             m_Expression = expression;
         }
 
-        public IEnumerator<TData> GetEnumerator()
+        public IEnumerator<T> GetEnumerator()
         {
-            return m_Context.Execute<TData>(this);
+            return m_Context.Execute(this);
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
@@ -43,10 +43,10 @@ namespace OSX.WmiLib
 
         public Type ElementType
         {
-            get { return typeof(TData); }
+            get { return typeof(T); }
         }
 
-        public System.Linq.Expressions.Expression Expression
+        public Expression Expression
         {
             get { return m_Expression; }
         }

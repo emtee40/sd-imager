@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SDImager</RootNamespace>
     <AssemblyName>SDImager</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <PublishUrl>publish\</PublishUrl>
@@ -58,6 +58,26 @@
   <PropertyGroup>
     <ApplicationIcon>smartmed.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -80,25 +100,89 @@
     <Compile Include="frmMain.Designer.cs">
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
+    <Compile Include="libcmdline\Attributes\AssemblyLicenseAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\AssemblyUsageAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\BaseOptionAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\HelpOptionAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\HelpVerbOptionAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\MultiLineTextAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\OptionArrayAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\OptionAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\OptionListAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\ParserStateAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\ValueListAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\ValueOptionAttribute.cs" />
+    <Compile Include="libcmdline\Attributes\VerbOptionAttribute.cs" />
+    <Compile Include="libcmdline\BadOptionInfo.cs" />
+    <Compile Include="libcmdline\Extensions\CharExtensions.cs" />
+    <Compile Include="libcmdline\Extensions\StringExtensions.cs" />
+    <Compile Include="libcmdline\GlobalSuppressions.cs" />
+    <Compile Include="libcmdline\Infrastructure\Assumes.cs" />
+    <Compile Include="libcmdline\Infrastructure\Pair.cs" />
+    <Compile Include="libcmdline\Infrastructure\PopsicleSetter.cs" />
+    <Compile Include="libcmdline\Infrastructure\ReflectionCache.cs" />
+    <Compile Include="libcmdline\Infrastructure\ReflectionHelper.cs" />
+    <Compile Include="libcmdline\Infrastructure\SR.strings.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>SR.tt</DependentUpon>
+    </Compile>
+    <Compile Include="libcmdline\IParserState.cs" />
+    <Compile Include="libcmdline\Parser.cs" />
+    <Compile Include="libcmdline\ParserException.cs" />
+    <Compile Include="libcmdline\ParserSettings.cs" />
+    <Compile Include="libcmdline\ParserState.cs" />
+    <Compile Include="libcmdline\ParsingError.cs" />
+    <Compile Include="libcmdline\Parsing\ArgumentParser.cs" />
+    <Compile Include="libcmdline\Parsing\IArgumentEnumerator.cs" />
+    <Compile Include="libcmdline\Parsing\LongOptionParser.cs" />
+    <Compile Include="libcmdline\Parsing\OneCharStringEnumerator.cs" />
+    <Compile Include="libcmdline\Parsing\OptionGroupParser.cs" />
+    <Compile Include="libcmdline\Parsing\OptionInfo.cs" />
+    <Compile Include="libcmdline\Parsing\OptionMap.cs" />
+    <Compile Include="libcmdline\Parsing\PresentParserState.cs" />
+    <Compile Include="libcmdline\Parsing\PropertyWriter.cs" />
+    <Compile Include="libcmdline\Parsing\StringArrayEnumerator.cs" />
+    <Compile Include="libcmdline\Parsing\TargetCapabilitiesExtensions.cs" />
+    <Compile Include="libcmdline\Parsing\ValueMapper.cs" />
+    <Compile Include="libcmdline\Text\BaseSentenceBuilder.cs" />
+    <Compile Include="libcmdline\Text\CopyrightInfo.cs" />
+    <Compile Include="libcmdline\Text\EnglishSentenceBuilder.cs" />
+    <Compile Include="libcmdline\Text\FormatOptionHelpTextEventArgs.cs" />
+    <Compile Include="libcmdline\Text\HeadingInfo.cs" />
+    <Compile Include="libcmdline\Text\HelpText.cs" />
+    <Compile Include="libcmdline\Text\_ParsingErrorsHandler.cs" />
+    <Compile Include="WmiLib\MSFT\Error.cs" />
+    <Compile Include="WmiLib\CIM\Setting.cs" />
+    <Compile Include="WmiLib\Infrastructure\HGlobal.cs" />
+    <Compile Include="WmiLib\MSFT\Disk.cs" />
+    <Compile Include="WmiLib\MSFT\Partition.cs" />
+    <Compile Include="WmiLib\MSFT\StorageDiagnoseResult.cs" />
+    <Compile Include="WmiLib\MSFT\StorageExtendedStatus.cs" />
+    <Compile Include="WmiLib\MSFT\StorageObject.cs" />
+    <Compile Include="WmiLib\MSFT\Volume.cs" />
+    <Compile Include="WmiLib\MSFT\_Base.cs" />
+    <Compile Include="WmiLib\Win32\NetworkAdapterConfiguration.cs" />
+    <Compile Include="WmiLib\Win32\PhysicalMedia.cs" />
     <Compile Include="WmiLib\WmiObject.cs" />
-    <Compile Include="WmiLib\Directory.cs" />
-    <Compile Include="WmiLib\DiskPartition.cs" />
-    <Compile Include="WmiLib\Evaluator.cs" />
+    <Compile Include="WmiLib\Win32\Directory.cs" />
+    <Compile Include="WmiLib\Win32\DiskPartition.cs" />
+    <Compile Include="WmiLib\Infrastructure\Evaluator.cs" />
     <Compile Include="WmiLib\WmiFileHandleObject.cs" />
-    <Compile Include="WmiLib\IWmiQueryable.cs" />
-    <Compile Include="WmiLib\LogicalDisk.cs" />
-    <Compile Include="WmiLib\WmiClassAttribute.cs" />
-    <Compile Include="WmiLib\DiskDrive.cs" />
-    <Compile Include="WmiLib\Volume.cs" />
+    <Compile Include="WmiLib\WmiQueryable.cs" />
+    <Compile Include="WmiLib\Win32\LogicalDisk.cs" />
+    <Compile Include="WmiLib\Infrastructure\WmiClassAttribute.cs" />
+    <Compile Include="WmiLib\Win32\DiskDrive.cs" />
+    <Compile Include="WmiLib\Win32\Volume.cs" />
     <Compile Include="WmiLib\WmiContext.cs" />
     <Compile Include="WmiLib\WmiInfo.cs" />
-    <Compile Include="WmiLib\WmiPropertyAttribute.cs" />
+    <Compile Include="WmiLib\Infrastructure\WmiPropertyAttribute.cs" />
     <Compile Include="WmiLib\IOWrapper.cs" />
     <Compile Include="ConstantStream.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WmiLib\WmiQuery.cs" />
-    <Compile Include="WmiLib\WmiQueryBuilder.cs" />
+    <Compile Include="WmiLib\Infrastructure\WmiQueryBuilder.cs" />
     <EmbeddedResource Include="frmMain.resx">
       <DependentUpon>frmMain.cs</DependentUpon>
     </EmbeddedResource>
@@ -114,6 +198,7 @@
     </Compile>
     <None Include="app.config" />
     <None Include="app.manifest" />
+    <None Include="libcmdline\Infrastructure\SR.strings" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -126,6 +211,10 @@
     <None Include="Resources\mbr.bin" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="libcmdline\Infrastructure\SR.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>SR.strings.cs</LastGenOutput>
+    </Content>
     <Content Include="smartmed.ico" />
   </ItemGroup>
   <ItemGroup>
@@ -144,6 +233,9 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

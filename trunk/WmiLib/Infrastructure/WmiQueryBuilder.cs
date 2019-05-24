@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 using System.Reflection;
+using System.Text;
 
-namespace OSX.WmiLib
+namespace OSX.WmiLib.Infrastructure
 {
     internal class WmiQueryBuilder : ExpressionVisitor
     {
         private WmiContext m_Context;
-        private bool m_FetchAllFields;
+        private bool m_FetchAllProperties;
         private StringBuilder sb;
 
         public WmiQueryBuilder(WmiContext context)
@@ -19,12 +16,11 @@ namespace OSX.WmiLib
             m_Context = context;
         }
 
-        public string Translate(IWmiQueryable query, bool fetchAllFields = false)
+        public string Translate(IWmiQueryable query, bool fetchAllProperties = false)
         {
-            m_FetchAllFields = fetchAllFields;
+            m_FetchAllProperties = fetchAllProperties;
             var a = query.ElementType.GetCustomAttribute<WmiClassAttribute>(false);
-            if (a == null)
-                throw new InvalidOperationException();
+            if (a == null) throw new InvalidOperationException();
 
             sb = new StringBuilder();
             var e = Evaluator.PartialEval(query.Expression);
@@ -44,39 +40,41 @@ namespace OSX.WmiLib
             switch (m.Method.Name)
             {
                 case "Where":
-                    this.Visit(m.Arguments[0]);
+                    Visit(m.Arguments[0]);
                     sb.Append(" WHERE ");
                     LambdaExpression lambda = (LambdaExpression)StripQuotes(m.Arguments[1]);
-                    this.Visit(lambda.Body);
+                    Visit(lambda.Body);
                     return m;
+
                 case "Associators":
                     var arg = (ConstantExpression)m.Arguments[0];
                     sb.Append("ASSOCIATORS OF {");
-                    sb.Append(WmiObject.GetClassName(arg.Value.GetType()));
+                    sb.Append(WmiInfo.GetClassName(arg.Value.GetType()));
                     sb.Append("=\"");
-                    sb.Append(WmiObject.GetWmiQueryValue(((WmiObject)arg.Value).ID));
+                    sb.Append(WmiInfo.GetWmiQueryValue(((WmiObject)arg.Value).GetKey()));
                     sb.Append("\"} WHERE ResultClass=");
-                    sb.Append(WmiObject.GetClassName(m.Method.GetGenericArguments()[0]));
+                    sb.Append(WmiInfo.GetClassName(m.Method.GetGenericArguments()[0]));
                     return m;
+
                 case "Contains":
-                    this.Visit(m.Object);
+                    Visit(m.Object);
                     sb.Append(" LIKE \"%");
                     var oldSB = sb;
                     sb = new StringBuilder();
-                    this.Visit(m.Arguments[0]);
+                    Visit(m.Arguments[0]);
                     var s = sb.ToString();
                     sb = oldSB;
                     sb.Append(s.Substring(1, s.Length - 2));
                     sb.Append("%\"");
                     return m;
             }
-            throw new NotSupportedException(string.Format("The method '{0}' is not supported", m.Method.Name));
+            throw new NotSupportedException($"The method '{m.Method.Name}' is not supported");
         }
 
         protected override Expression VisitBinary(BinaryExpression b)
         {
             sb.Append("(");
-            this.Visit(b.Left);
+            Visit(b.Left);
             switch (b.NodeType)
             {
                 case ExpressionType.And:
@@ -106,9 +104,9 @@ namespace OSX.WmiLib
                     sb.Append(" >= ");
                     break;
                 default:
-                    throw new NotSupportedException(string.Format("The binary operator '{0}' is not supported", b.NodeType));
+                    throw new NotSupportedException($"The binary operator '{b.NodeType}' is not supported");
             }
-            this.Visit(b.Right);
+            Visit(b.Right);
             sb.Append(")");
             return b;
         }
@@ -119,13 +117,13 @@ namespace OSX.WmiLib
             {
                 case ExpressionType.Not:
                     sb.Append(" NOT ");
-                    this.Visit(u.Operand);
+                    Visit(u.Operand);
                     break;
                 case ExpressionType.Convert:
-                    this.Visit(u.Operand);
+                    Visit(u.Operand);
                     break;
                 default:
-                    throw new NotSupportedException(string.Format("The unary operator '{0}' is not supported", u.NodeType));
+                    throw new NotSupportedException($"The unary operator '{u.NodeType}' is not supported");
             }
             return u;
         }
@@ -139,13 +137,13 @@ namespace OSX.WmiLib
                 if (sb.Length == 0)
                 {
                     sb.Append("SELECT ");
-                    if (m_FetchAllFields)
+                    if (m_FetchAllProperties)
                         sb.Append("*");
                     else
-                        sb.Append(string.Join(",", WmiObject.GetWmiPropertyNames(q.ElementType)));
+                        sb.Append(string.Join(",", WmiInfo.GetWmiPropertyNames(q.ElementType)));
                     sb.Append(" FROM ");
                 }
-                sb.Append(WmiObject.GetClassName(q.ElementType));
+                sb.Append(WmiInfo.GetClassName(q.ElementType));
             }
             else if (c.Value == null)
             {
@@ -159,10 +157,10 @@ namespace OSX.WmiLib
                         sb.Append(((bool)c.Value) ? 1 : 0);
                         break;
                     case TypeCode.String:
-                        sb.AppendFormat("\"{0}\"", WmiObject.GetWmiQueryValue(c.Value));
+                        sb.AppendFormat("\"{0}\"", WmiInfo.GetWmiQueryValue(c.Value));
                         break;
                     case TypeCode.Object:
-                        throw new NotSupportedException(string.Format("The constant for '{0}' is not supported", c.Value));
+                        throw new NotSupportedException($"The constant for '{c.Value}' is not supported");
                     default:
                         sb.Append(c.Value);
                         break;
@@ -175,18 +173,27 @@ namespace OSX.WmiLib
         {
             if (m.Expression != null && m.Expression.NodeType == ExpressionType.Parameter)
             {
-                if (m.Member.Name == "ID")
-                    sb.Append(WmiObject.GetKeyPropertyName(m.Expression.Type));
+                if (m.Member.Name == "GetKey" && m.Member.MemberType == MemberTypes.Method)
+                    sb.Append(WmiInfo.GetKeyProperty(m.Expression.Type));
                 else
                 {
                     var a = m.Member.GetCustomAttribute<WmiPropertyAttribute>();
-                    if (a == null)
-                        throw new MemberAccessException(string.Format("'{0}' is not a WMI property of class '{1}'", m.Member.Name, m.Type.Name));
-                    sb.Append(a.Property ?? m.Member.Name);
+                    var property = m.Member as PropertyInfo;
+                    if (property == null)
+                        throw new MemberAccessException($"'{m.Member.Name} is not a property of class '{m.Type.Name}'");
+
+                    //if (a == null)
+                    //    throw new MemberAccessException($"'{m.Member.Name}' is not a WMI property of class '{m.Type.Name}'");
+
+                    var propName = a?.Property ?? m.Member.Name;
+                    if (property.PropertyType == typeof(bool))
+                        sb.Append($"({propName} <> 0)");
+                    else
+                        sb.Append(propName);
                 }
                 return m;
             }
-            throw new NotSupportedException(string.Format("The member '{0}' is not supported", m.Member.Name));
+            throw new NotSupportedException($"The member '{m.Member.Name}' is not supported");
         }
 
     }
